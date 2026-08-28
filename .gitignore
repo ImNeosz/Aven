@@ -1,0 +1,10 @@
+/build/
+/out/
+/.toolchain/
+/Qt/
+/.vs/
+/.vscode/
+CMakeUserPresets.json
+*.user
+*.VC.db
+*.suo
