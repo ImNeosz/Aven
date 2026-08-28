@@ -40,40 +40,96 @@ Item {
                     id: collection
                     required property int index
                     required property var modelData
+                    readonly property bool expanded: home.expandedCollection === collection.index
                     spacing: 7
+
+                    Timer {
+                        id: collapseTimer
+                        interval: 110
+                        onTriggered: {
+                            if (home.expandedCollection === collection.index)
+                                home.expandedCollection = -1
+                        }
+                    }
+
                     HoverHandler {
                         onHoveredChanged: {
-                            if (hovered)
+                            if (hovered) {
+                                collapseTimer.stop()
                                 home.expandedCollection = collection.index
-                            else if (home.expandedCollection === collection.index)
-                                home.expandedCollection = -1
+                            } else {
+                                collapseTimer.restart()
+                            }
                         }
                     }
                     Button {
                         id: collectionButton
                         Layout.alignment: Qt.AlignHCenter
-                        text: collection.modelData.name + (home.expandedCollection === collection.index ? "  −" : "  +")
+                        text: collection.modelData.name + (collection.expanded ? "  −" : "  +")
                         font.pixelSize: 12
                         leftPadding: 13; rightPadding: 13
                         implicitHeight: 32
                         onClicked: home.expandedCollection = collection.index
                         contentItem: Text { text: collectionButton.text; font: collectionButton.font; color: "#f4f5f1"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        background: Rectangle { radius: 8; color: collectionButton.hovered ? "#35ffffff" : "#1fffffff"; border.width: 1; border.color: "#35ffffff" }
+                        background: Rectangle {
+                            radius: 8
+                            color: collectionButton.hovered ? "#35ffffff" : "#1fffffff"
+                            border.width: 1
+                            border.color: collectionButton.hovered ? "#4affffff" : "#35ffffff"
+
+                            Behavior on color { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                            Behavior on border.color { ColorAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                        }
                     }
-                    ColumnLayout {
-                        visible: home.expandedCollection === collection.index
+
+                    Item {
+                        id: linksReveal
                         Layout.alignment: Qt.AlignHCenter
-                        spacing: 2
-                        Repeater {
-                            model: collection.modelData.links
-                            delegate: Button {
-                                required property var modelData
-                                Layout.alignment: Qt.AlignHCenter
-                                text: modelData.name
-                                flat: true
-                                font.pixelSize: 12
-                                contentItem: Text { text: parent.text; font: parent.font; color: parent.hovered ? "#ffffff" : "#dfe3dd"; horizontalAlignment: Text.AlignHCenter }
-                                onClicked: home.navigateRequested(modelData.url)
+                        Layout.preferredWidth: linksColumn.implicitWidth
+                        Layout.preferredHeight: linksColumn.implicitHeight * revealProgress
+                        opacity: revealProgress
+                        clip: true
+
+                        property real revealProgress: collection.expanded ? 1 : 0
+                        Behavior on revealProgress {
+                            NumberAnimation {
+                                duration: collection.expanded ? 260 : 220
+                                easing.type: collection.expanded ? Easing.OutCubic : Easing.InOutCubic
+                            }
+                        }
+
+                        ColumnLayout {
+                            id: linksColumn
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            spacing: 2
+                            transform: Translate { y: 5 * (1 - linksReveal.revealProgress) }
+
+                            Repeater {
+                                model: collection.modelData.links
+                                delegate: Button {
+                                    id: linkButton
+                                    required property var modelData
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: modelData.name
+                                    flat: true
+                                    font.pixelSize: 12
+                                    contentItem: Text {
+                                        text: linkButton.text
+                                        font: linkButton.font
+                                        color: linkButton.hovered ? "#ffffff" : "#dfe3dd"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+
+                                        Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                    }
+                                    background: Rectangle {
+                                        radius: 6
+                                        color: linkButton.hovered ? "#20ffffff" : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                    }
+                                    onClicked: home.navigateRequested(modelData.url)
+                                }
                             }
                         }
                     }
